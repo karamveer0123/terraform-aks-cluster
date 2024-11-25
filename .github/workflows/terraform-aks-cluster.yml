@@ -64,13 +64,16 @@ jobs:
   create-aks-cluster-dev:
     name: 'Create AKS Cluster for Dev Environment'
     runs-on: ubuntu-latest
-    environment: ${{ env.DEV_ENV }}
+    environment: ${{ env.DEV_ENV }}  # Use the DEV_ENV environment variable directly
+
     needs: terraform  # This ensures the Terraform job completes first
-    
 
     defaults:
       run:
         shell: bash
+
+    env:
+      DEV_ENV: ${{ env.DEV_ENV }}  # Set environment variables explicitly within the job
 
     steps:
     # Checkout the repository to the GitHub Actions runner
@@ -111,13 +114,16 @@ jobs:
   create-aks-cluster-qa:
     name: 'Create AKS Cluster for QA Environment'
     runs-on: ubuntu-latest
-    environment: ${{ env.QA_ENV }}
+    environment: ${{ env.QA_ENV }}  # Use the QA_ENV environment variable directly
+
     needs: terraform  # This ensures the Terraform job completes first
- 
 
     defaults:
       run:
         shell: bash
+
+    env:
+      QA_ENV: ${{ env.QA_ENV }}  # Set environment variables explicitly within the job
 
     steps:
     # Checkout the repository to the GitHub Actions runner
