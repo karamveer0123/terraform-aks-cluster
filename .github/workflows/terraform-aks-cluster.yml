@@ -69,7 +69,7 @@ jobs:
   create-aks-cluster-dev:
     name: 'Create AKS Cluster for Dev Environment'
     runs-on: ubuntu-latest
-    environment: dev  # Static environment for the Dev environment
+    environment: ${{ env.DEV_ENV }}  # Static environment for the Dev environment
 
     needs: terraform  # This ensures the Terraform job completes first
 
@@ -121,7 +121,7 @@ jobs:
   create-aks-cluster-qa:
     name: 'Create AKS Cluster for QA Environment'
     runs-on: ubuntu-latest
-    environment: qa  # Static environment for the QA environment
+    environment: ${{ env.QA_ENV }}  # Static environment for the QA environment
 
     needs: terraform  # This ensures the Terraform job completes first
 
