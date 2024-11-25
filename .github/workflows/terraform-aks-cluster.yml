@@ -1,28 +1,70 @@
-name: Terraform AKS Cluster Creation
+name: 'Terraform'
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:  # Declare environment variables globally for all jobs
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  STORAGE_ACCOUNT_NAME: terraformstatefilegithub
+  CONTAINER_NAME: terraformstatefiles
+  BACKEND_KEY: githubactions.tfstate
+  AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
+  DEV_ENV: dev
+  QA_ENV: qa
 
 jobs:
   terraform:
-    name: Terraform Plan and Apply
+    name: 'Terraform'
     runs-on: ubuntu-latest
+    environment: production  # Static environment for the Terraform job
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
-    - name: Checkout the repository
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
       uses: actions/checkout@v4
 
+    # Install the latest version of Terraform CLI
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:
-        terraform_version: '1.5.6'
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
+    # Log in to Azure using Service Principal credentials
     - name: Azure login
       uses: azure/login@v1
-      with:
+      with: 
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    # Show Azure account to verify login
+    - name: Show Azure account
+      run: az account show 
+
+    # Initialize Terraform with Azure Backend Configuration
+    - name: Terraform Init
+      working-directory: terraform-manifest
+      env:
+        STORAGE_ACCOUNT_NAME: ${{ env.STORAGE_ACCOUNT_NAME }}
+        CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+        DEV_ENV: ${{ env.DEV_ENV }}
+        AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
+      run: terraform init -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ env.CONTAINER_NAME }}" -backend-config="key=${{ env.DEV_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
+
+    # Validate Terraform configuration
+    - name: Terraform validate
+      working-directory: terraform-manifest
+      run: terraform validate
 
   create-aks-cluster-dev:
     name: 'Create AKS Cluster for Dev Environment'
@@ -36,44 +78,44 @@ jobs:
         shell: bash
 
     steps:
-    - name: Checkout the repository
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
       uses: actions/checkout@v4
 
+    # Install Terraform and authenticate to Azure
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:
-        terraform_version: '1.5.6'
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-    - name: Azure login for AKS (Dev)
+    - name: Azure login for AKS
       uses: azure/login@v1
       with: 
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Terraform Init for AKS (Dev)
+    # Initialize Terraform with Azure Backend Configuration for AKS creation
+    - name: Terraform Init for AKS
       working-directory: terraform-manifest
       env:
-        STORAGE_ACCOUNT_NAME: ${{ secrets.STORAGE_ACCOUNT_NAME }}
-        CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+        STORAGE_ACCOUNT_NAME: ${{ env.STORAGE_ACCOUNT_NAME }}
+        CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+        DEV_ENV: ${{ env.DEV_ENV }}
         AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
-        TF_VAR_environment: dev  # Set the environment variable
-      run: terraform init -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" -backend-config="key=${{ secrets.DEV_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
+        TF_VAR_environment: dev
+      run: terraform init -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ env.CONTAINER_NAME }}" -backend-config="key=${{ env.DEV_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
 
-    - name: Terraform validate for AKS (Dev)
+    # Terraform Plan for AKS (runs after the validate step)
+    - name: Terraform Plan for AKS
       working-directory: terraform-manifest
       env:
-        TF_VAR_environment: dev  # Ensure this is passed in the validate step
-      run: terraform validate
-
-    - name: Terraform Plan for AKS (Dev)
-      working-directory: terraform-manifest
-      env:
-        TF_VAR_environment: dev  # Pass the environment variable here
+        TF_VAR_environment: dev
       run: terraform plan -out=tfplan
 
-    - name: Terraform Apply for AKS (Dev)
+    # Terraform Apply for AKS (applies changes to create the AKS cluster)
+    - name: Terraform Apply for AKS
       working-directory: terraform-manifest
       env:
-        TF_VAR_environment: dev  # Pass the environment variable here as well
+        TF_VAR_environment: dev
       run: terraform apply --auto-approve tfplan
 
   create-aks-cluster-qa:
@@ -88,42 +130,42 @@ jobs:
         shell: bash
 
     steps:
-    - name: Checkout the repository
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
       uses: actions/checkout@v4
 
+    # Install Terraform and authenticate to Azure
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
       with:
-        terraform_version: '1.5.6'
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-    - name: Azure login for AKS (QA)
+    - name: Azure login for AKS
       uses: azure/login@v1
       with: 
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Terraform Init for AKS (QA)
+    # Initialize Terraform with Azure Backend Configuration for AKS creation
+    - name: Terraform Init for AKS
       working-directory: terraform-manifest
       env:
-        STORAGE_ACCOUNT_NAME: ${{ secrets.STORAGE_ACCOUNT_NAME }}
-        CONTAINER_NAME: ${{ secrets.CONTAINER_NAME }}
+        STORAGE_ACCOUNT_NAME: ${{ env.STORAGE_ACCOUNT_NAME }}
+        CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+        QA_ENV: ${{ env.QA_ENV }}
         AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
-        TF_VAR_environment: qa  # Set the environment variable for QA
-      run: terraform init -backend-config="storage_account_name=${{ secrets.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ secrets.CONTAINER_NAME }}" -backend-config="key=${{ secrets.QA_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
+        TF_VAR_environment: qa
+      run: terraform init -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ env.CONTAINER_NAME }}" -backend-config="key=${{ env.QA_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
 
-    - name: Terraform validate for AKS (QA)
+    # Terraform Plan for AKS (runs after the validate step)
+    - name: Terraform Plan for AKS
       working-directory: terraform-manifest
       env:
-        TF_VAR_environment: qa  # Ensure this is passed in the validate step for QA
-      run: terraform validate
-
-    - name: Terraform Plan for AKS (QA)
-      working-directory: terraform-manifest
-      env:
-        TF_VAR_environment: qa  # Pass the environment variable here for QA
+        TF_VAR_environment: qa
       run: terraform plan -out=tfplan
 
-    - name: Terraform Apply for AKS (QA)
+    # Terraform Apply for AKS (applies changes to create the AKS cluster)
+    - name: Terraform Apply for AKS
       working-directory: terraform-manifest
       env:
-        TF_VAR_environment: qa  # Pass the environment variable here as well for QA
+        TF_VAR_environment: qa
       run: terraform apply --auto-approve tfplan
