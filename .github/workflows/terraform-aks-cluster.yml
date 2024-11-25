@@ -163,6 +163,7 @@ jobs:
       run: terraform validate
 
     - name: Debug Environment Variables
+      working-directory: terraform-manifest
       run: env
 
     # Terraform Plan for AKS (runs after the validate step)
