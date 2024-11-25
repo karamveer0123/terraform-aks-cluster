@@ -162,6 +162,9 @@ jobs:
       working-directory: terraform-manifest
       run: terraform validate
 
+    - name: Debug Environment Variables
+      run: env
+
     # Terraform Plan for AKS (runs after the validate step)
     - name: Terraform Plan for AKS
       working-directory: terraform-manifest
