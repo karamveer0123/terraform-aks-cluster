@@ -69,7 +69,7 @@ jobs:
   create-aks-cluster-dev:
     name: 'Create AKS Cluster for Dev Environment'
     runs-on: ubuntu-latest
-    environment: ${{ env.DEV_ENV }}  # Static environment for the Dev environment
+    environment: dev  # Static environment for the Dev environment
 
     needs: terraform  # This ensures the Terraform job completes first
 
@@ -101,6 +101,7 @@ jobs:
         CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
         DEV_ENV: ${{ env.DEV_ENV }}
         AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
+        TF_VAR_environmnet: ${{ env.DEV_ENV }}
       run: terraform init -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ env.CONTAINER_NAME }}" -backend-config="key=${{ env.DEV_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
 
     # Validate Terraform configuration for AKS
@@ -121,7 +122,7 @@ jobs:
   create-aks-cluster-qa:
     name: 'Create AKS Cluster for QA Environment'
     runs-on: ubuntu-latest
-    environment: ${{ env.QA_ENV }}  # Static environment for the QA environment
+    environment: qa  # Static environment for the QA environment
 
     needs: terraform  # This ensures the Terraform job completes first
 
@@ -153,6 +154,7 @@ jobs:
         CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
         QA_ENV: ${{ env.QA_ENV }}
         AZURE_STORAGE_ACCESS_KEY: ${{ secrets.AZURE_STORAGE_ACCESS_KEY }}
+        TF_VAR_environmnet: ${{ env.QA_ENV }}
       run: terraform init -backend-config="storage_account_name=${{ env.STORAGE_ACCOUNT_NAME }}" -backend-config="container_name=${{ env.CONTAINER_NAME }}" -backend-config="key=${{ env.QA_ENV }}-githubactions.tfstate" -backend-config="access_key=${{ secrets.AZURE_STORAGE_ACCESS_KEY }}"
 
     # Validate Terraform configuration for AKS
